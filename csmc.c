@@ -1,25 +1,17 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdbool.h>
+#include <semaphore.h>
 #include <pthread.h>
 
-void *StudentThread(void *data)
-{
-	//DEBUG PRINT STATEMENT
-	printf("Student Thread Running!\n");
-	pthread_exit(NULL);
+#define MAX_PROG_TIME 2
+#define TUTOR_TIME 0.2
+
+float generateRandomWaitTime(){
+	return rand()/MAX_PROG_TIME;
 }
 
-void *TutorThread(void *data)
-{
-	printf("Student Thread Running!\n");
-	pthread_exit(NULL);
-}
-
-void *CoordinatorThread(void *data)
-{
-	pthread_exit(NULL);
-}
+sem_t coord_mutex;
 
 struct student {
 	pthread_t thread;
@@ -40,6 +32,29 @@ struct chair {
 	int currentStudent;
 };
 
+struct chair* chairs;
+
+void *StudentThread(void *data)
+{
+	//DEBUG PRINT STATEMENT
+	printf("Student Thread Running!\n");
+	pthread_exit(NULL);
+}
+
+void *TutorThread(void *data)
+{
+	//DEBUG PRINT STATEMENT
+	printf("Tutor Thread Running!\n");
+	pthread_exit(NULL);
+}
+
+void *CoordinatorThread(void *data)
+{
+	//DEBUG PRINT STATEMENT
+	printf("Coordinator Running!\n");
+	pthread_exit(NULL);
+}
+
 int main(int argc, char *argv[])
 {
 	// Read arguments for number of threads / help
@@ -51,14 +66,14 @@ int main(int argc, char *argv[])
 		NUM_HELP = atoi(argv[4]);
 	}
 	else {
-		printf("ERROR! Not Enough Arguments! Syntax: CSMC #students #tutors #chairs #help");
+		printf("ERROR! Not Enough Arguments! Syntax: CSMC #students #tutors #chairs #help\n");
 		exit(-1);
 	}
 
 	// Define datastructures to hold info about threads / chairs
 	struct student *students = (struct student*) malloc(NUM_STUDENTS * sizeof(struct student));
 	struct tutor *tutors = (struct tutor*) malloc(NUM_TUTORS * sizeof(struct tutor));
-	struct tutor *chairs = (struct chair*) malloc(NUM_CHAIRS * sizeof(struct chair));
+	chairs = (struct chair*) malloc(NUM_CHAIRS * sizeof(struct chair));
 
 	int rc; long t;
 	for(t = 0; t < NUM_STUDENTS; t++){
@@ -82,5 +97,15 @@ int main(int argc, char *argv[])
 		}
 	}
 
-	pthread_exit(NULL);
+	pthread_t coordinator;
+	pthread_create(&coordinator, NULL, CoordinatorThread, NULL);
+
+	for(t = 0; t < NUM_STUDENTS; t++){
+		pthread_join(students[t].thread, NULL);
+	}
+	for(t = 0; t < NUM_TUTORS; t++){
+		pthread_join(tutors[t].thread, NULL);
+	}
+	pthread_join(coordinator, NULL);
+	return 0;
 }
