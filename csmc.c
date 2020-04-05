@@ -32,19 +32,19 @@ struct chair {
 	int currentStudent;
 };
 
-struct chair* chairs;
+struct chair *chairs;
 
 void *StudentThread(void *data)
 {
 	//DEBUG PRINT STATEMENT
-	printf("Student Thread Running!\n");
+	printf("Student Thread %d Running!\n", *(int*)data);
 	pthread_exit(NULL);
 }
 
 void *TutorThread(void *data)
 {
 	//DEBUG PRINT STATEMENT
-	printf("Tutor Thread Running!\n");
+	printf("Tutor Thread %d Running!\n", *(int*)data);
 	pthread_exit(NULL);
 }
 
@@ -107,5 +107,7 @@ int main(int argc, char *argv[])
 		pthread_join(tutors[t].thread, NULL);
 	}
 	pthread_join(coordinator, NULL);
+
+	printf("Exiting Main Thread!");
 	return 0;
 }
