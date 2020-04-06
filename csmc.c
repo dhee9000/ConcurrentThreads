@@ -8,7 +8,7 @@
 #define TUTOR_TIME 0.2
 
 float generateRandomWaitTime(){
-	return rand()/MAX_PROG_TIME;
+	return (float)rand()/(float)MAX_PROG_TIME;
 }
 
 sem_t coord_mutex;
@@ -37,9 +37,9 @@ struct chair {
 struct chair *chairs;
 
 void studentDoProgram(){
-	int time = generateRandomWaitTime();
+	int time = (int)generateRandomWaitTime();
 	// DEBUG PRINT STATEMENT
-	printf("Student is programming for %d", time);
+	printf("Student is programming for %d\n", time);
 	sleep(time);
 }
 
