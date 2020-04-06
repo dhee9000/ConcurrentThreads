@@ -170,6 +170,9 @@ void *CoordinatorThread(void *data)
         priority = priorityLower;
         chairs[currentChair].priority = priority;
         printf("Co: Student %d with priority %d in the queue. Waiting students now = %d. Total requests = %d\n", studentId, priority, chairsTaken, coordinatorRequests);
+
+		// Notify the tutors
+		sem_post(&tutorNeeded);
     }
 }
 
