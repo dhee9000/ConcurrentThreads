@@ -58,7 +58,7 @@ void *StudentThread(void *data)
         if(chairsTaken < NUM_CHAIRS){
             // Take a chair, chair info will be filled in by coordinator
             chairsTaken++;
-            printf("St: Student %d takes a seat. Empty chairs = %d.", self.id, NUM_CHAIRS - chairsTaken);
+            printf("St: Student %d takes a seat. Empty chairs = %d.\n", self.id, NUM_CHAIRS - chairsTaken);
             
             // Notify coordinator, release chairs mutex
             arrivedStudentId = self.id; arrivedStudentVisits = self.visits;
@@ -80,14 +80,14 @@ void *StudentThread(void *data)
 
             // Get tutored for TUTOR_TIME and then increment visits
             sleep(TUTOR_TIME);
-            printf("St: Student %d received help from Tutor %d.", self.id, tutoredBy);
+            printf("St: Student %d received help from Tutor %d.\n", self.id, tutoredBy);
             chairs[chairIndex].taken = false;
             chairsTaken--;
             self.visits++;
         }
         else{
             // No empty chairs found, continue programming.
-            printf("St: Student %d found no empty chair. Will try again later", self.id);
+            printf("St: Student %d found no empty chair. Will try again later\n", self.id);
             sem_post(&room_mutex);
             continue;
         }
@@ -117,7 +117,7 @@ void *TutorThread(void *data)
 
         // Tutor the student
         sleep(TUTOR_TIME);
-        printf("Tu: Student %d tutored by Tutor %d. Students tutored now = %d. Total sessions tutored = %d", chairs[highestPriority].studentId, self.id);
+        printf("Tu: Student %d tutored by Tutor %d. Students tutored now = %d. Total sessions tutored = %d\n", chairs[highestPriority].studentId, self.id);
         activeTutoring--;
     }
 }
@@ -168,7 +168,7 @@ void *CoordinatorThread(void *data)
         }
         priority = priorityLower;
         chairs[currentChair].priority = priority;
-        printf("Co: Student %d with priority %d in the queue. Waiting students now = %d. Total requests = %d", studentId, priority, chairsTaken, coordinatorRequests);
+        printf("Co: Student %d with priority %d in the queue. Waiting students now = %d. Total requests = %d\n", studentId, priority, chairsTaken, coordinatorRequests);
     }
 }
 
