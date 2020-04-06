@@ -92,6 +92,8 @@ void *StudentThread(void *data)
             continue;
         }
     }
+
+	pthread_exit(NULL);
 }
 
 void *TutorThread(void *data)
