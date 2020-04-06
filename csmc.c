@@ -12,15 +12,16 @@ float generateRandomWaitTime(){
 }
 
 sem_t coord_mutex;
+sem_t queue;
 
-struct student {
+typedef struct student {
 	pthread_t thread;
 	int id;
 	int visits;
 	int numhelp;
 };
 
-struct tutor {
+typedef struct tutor {
 	pthread_t thread;
 	int id;
 	bool idle;
@@ -30,16 +31,29 @@ struct tutor {
 struct chair {
 	int id;
 	bool taken;
-	int currentStudent;
+	const struct student* student;
 };
 
 struct chair *chairs;
+
+void studentDoProgram(){
+	sleep(generateRandomWaitTime());
+}
+
+void getHelpFromTutor(struct student &self){
+	printf("Student %d is getting help!", self.id);
+	self.visits++;
+}
 
 void *StudentThread(void *data)
 {
 	struct student self = *(struct student*)data;
 	//DEBUG PRINT STATEMENT
 	printf("Student Thread %d Running!\n", self.id);
+	while(self.numhelp - self.visits > 0){
+		studentDoProgram();
+		getHelpFromTutor(self);
+	}
 	pthread_exit(NULL);
 }
 
@@ -115,6 +129,6 @@ int main(int argc, char *argv[])
 	}
 	pthread_join(coordinator, NULL);
 
-	printf("Exiting Main Thread!");
+	printf("Exiting Main Thread!\n");
 	return 0;
 }
