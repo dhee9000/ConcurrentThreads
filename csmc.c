@@ -5,77 +5,177 @@
 #include <semaphore.h>
 #include <pthread.h>
 
-#define MAX_PROG_TIME 2
+#define MAX_SLEEP 2
 #define TUTOR_TIME 0.2
 
-sem_t coord_mutex;
-sem_t queue;
+typedef struct {
+    int id;
+    pthread_t thread;
+    int visits;
+    sem_t notifyStudent;
+} Student;
 
-struct student {
-	pthread_t thread;
-	int id;
-	int visits;
-	int numhelp;
-};
+typedef struct {
+    int id;
+    pthread_t thread;
+} Tutor;
 
-struct tutor {
-	pthread_t thread;
-	int id;
-	bool idle;
-	int currentStudent;
-};
+typedef struct {
+    bool taken;
+    int studentId;
+    int studentVisits;
+    int arrivedAt;
+    int priority;
+    sem_t *notifyStudent;
+    int tutoredBy;
+} Chair;
 
-struct chair {
-	int id;
-	bool taken;
-	const struct student* student;
-};
+Chair * chairs;
+int chairsTaken = 0, arrivedStudentId = -1, arrivedStudentVisits = -1;
 
-struct chair *chairs;
+sem_t tutorNeeded;
+sem_t room_mutex;
+sem_t chairs_mutex;
+sem_t notifyCoordinator;
 
-void studentDoProgram(){
-	int time = rand()%MAX_PROG_TIME;
-	// DEBUG PRINT STATEMENT
-	printf("Student is programming for %d\n", time);
-	sleep(time);
-}
-
-void getHelpFromTutor(struct student *selfptr){
-	printf("Student %d is getting help!\n", selfptr->id);
-	selfptr->visits++;
-}
+int coordinatorRequests = 0; tutoringCompleted = 0; activeTutoring = 0;
 
 void *StudentThread(void *data)
 {
-	struct student self = *(struct student*)data;
-	//DEBUG PRINT STATEMENT
-	printf("Student Thread %d Running!\n", self.id);
-	while(self.numhelp - self.visits > 0){
-		studentDoProgram();
-		getHelpFromTutor(&self);
-	}
-	pthread_exit(NULL);
+    // Get student record
+    Student self = *(Student*)data;
+    
+    while(self.visits < NUM_HELP){
+
+        // Program for some time
+        sleep(rand()%MAX_SLEEP);
+
+        // Try and get a tutor
+        // Wait for access to check chairs and notify coordinator
+        sem_wait(&room_mutex);
+        if(chairsTaken < NUM_CHAIRS){
+            // Take a chair, chair info will be filled in by coordinator
+            chairsTaken++;
+            printf("St: Student %d takes a seat. Empty chairs = %d.", self.id, NUM_CHAIRS - chairsTaken);
+            
+            // Notify coordinator, release chairs mutex
+            arrivedStudentId = self.id; arrivedStudentVisits = self.visits;
+            sem_post(&notifyCoordinator);
+            sem_post(&room_mutex);
+            
+            // Wait until notified by tutor
+            sem_wait(&self.notifyStudent);
+
+            // Get chair info
+            int chairIndex = 0;
+            for(int i = 0; i < NUM_CHAIRS; i++){
+                if(chairs[i].taken && (chairs[i].studentId == self.id))
+                    chairIndex = i; break;
+            }
+            if(chairIndex == -1)
+                exit(-1);
+            int tutoredBy = chairs[chairIndex].tutoredBy;
+
+            // Get tutored for TUTOR_TIME and then increment visits
+            sleep(TUTOR_TIME);
+            printf("St: Student %d received help from Tutor %d.", self.id, tutoredBy);
+            chairs[chairIndex].taken = false;
+            chairsTaken--;
+            self.visits++;
+        }
+        else{
+            // No empty chairs found, continue programming.
+            printf("St: Student %d found no empty chair. Will try again later", self.id);
+            sem_post(&room_mutex);
+            continue;
+        }
+    }
 }
 
 void *TutorThread(void *data)
 {
-	struct tutor self = *(struct tutor*)data;
-	//DEBUG PRINT STATEMENT
-	printf("Tutor Thread %d Running!\n", self.id);
-	pthread_exit(NULL);
+    // Get tutor record
+    Tutor self = *(Tutor*)data;
+    
+    while(1){
+        // Wait until tutor needed
+        wait(&tutorNeeded);
+
+        // Get highest priority student
+        int highestPriority = 0;
+        for(int i = 1; i < NUM_CHAIRS; i++){
+            if(chairs[i].priority > chairs[highestPriority].priority)
+                highestPriority = i;
+        }
+
+        // Notify the student that tutor is ready
+        chairs[highestPriority].tutoredBy = self.id;
+        activeTutoring++;
+        sem_post(&chairs[highestPriority].notifyStudent);
+
+        // Tutor the student
+        sleep(TUTOR_TIME);
+        printf("Tu: Student %d tutored by Tutor %d. Students tutored now = %d. Total sessions tutored = %d", );
+        activeTutoring--;
+    }
 }
 
 void *CoordinatorThread(void *data)
 {
-	//DEBUG PRINT STATEMENT
-	printf("Coordinator Running!\n");
-	pthread_exit(NULL);
+    while(1){
+        // Wait until the coordinator is notified
+        sem_wait(&notifyCoordinator);
+
+        // Get the Id of the notifying student
+        int studentId = arrivedStudentId; arrivedStudentId = -1;
+        int studentVisits = arrivedStudentVisits; arrivedStudentVisits = -1;
+        coordinatorRequests++;
+
+        // Find the first empty chair
+        int currentChair = -1;
+        for(int i = 0; i < NUM_CHAIRS; i++){
+            if(!chairs[i].taken)
+                currentChair = i; break;
+        }
+        if(currentChair == -1)
+            exit(-1);
+
+        // Place the student there
+        chairs[currentChair].taken = true;
+        chairs[currentChair].studentId = studentId;
+        chairs[currentChair].arrivedAt = coordinatorRequests;
+        chairs[currentChair].studentVisits = studentVisits;
+
+        // Calculate and update chair priority
+        int priority = -1, priorityLower = 0, priorityHigher = 0;
+        for(int i = 0; i < NUM_CHAIRS; i++){
+            if(i == currentChair)
+                continue;
+            if(chairs[i].taken){
+                if((chairs[i].studentVisits < studentVisits) || ((chairs[i].studentVisits == studentVisits) && (chairs[i].arrivedAt < chairs[currentChair].arrivedAt))){
+                    priorityHigher++;
+                }
+                else if((chairs[i].studentVisits > studentVisits) || ((chairs[i].studentVisits == studentVisits) && (chairs[i].arrivedAt > chairs[currentChair].arrivedAt))){
+                    priorityLower++;
+                    chairs[i].priority++;
+                }
+            }
+            else{
+                continue;
+            }
+        }
+        priority = priorityLower;
+        chairs[currentChair].priority = priority;
+        printf("Co: Student %d with priority %d in the queue. Waiting students now = %d. Total requests = %d", studentId, priority, chairsTaken, coordinatorRequests);
+    }
 }
+
+int NUM_CHAIRS = 0, NUM_HELP = 0;
 
 int main(int argc, char *argv[])
 {
 	// Read arguments for number of threads / help
-	int NUM_STUDENTS, NUM_TUTORS, NUM_CHAIRS, NUM_HELP;
+	int NUM_STUDENTS, NUM_TUTORS;
 	if(argc ==  5){
 		NUM_STUDENTS = atoi(argv[1]);
 		NUM_TUTORS = atoi(argv[2]);
@@ -87,48 +187,43 @@ int main(int argc, char *argv[])
 		exit(-1);
 	}
 
-	// Define datastructures to hold info about threads / chairs
-	struct student *students = (struct student*) malloc(NUM_STUDENTS * sizeof(struct student));
-	struct tutor *tutors = (struct tutor*) malloc(NUM_TUTORS * sizeof(struct tutor));
-	chairs = (struct chair*) malloc(NUM_CHAIRS * sizeof(struct chair));
+	// Initialize semaphores
+    sem_init(&room_mutex, 0, 1);
+    sem_init(&notifyCoordinator, 0, 0);
+    sem_init(&tutorNeeded, 0, 0);
 
+	// Define datastructures to hold info about threads / chairs
+	Student *students = (Student*) malloc(NUM_STUDENTS * sizeof(Student));
+	Tutor *tutors = (Tutor*) malloc(NUM_TUTORS * sizeof(Tutor));
+    chairs = (Chair*) malloc(NUM_CHAIRS * sizeof(Chair));
+
+    // Create coordinator thread
+	pthread_t coordinator;
+	pthread_create(&coordinator, NULL, CoordinatorThread, (void*)&NUM_CHAIRS);
+
+    // Create threads for students and tutors
 	int rc; long t;
 	for(t = 0; t < NUM_STUDENTS; t++){
-		// DEBUG PRINT STATEMENT
-		printf("MAIN: Creating Student Thread #%ld\n", t);
 		students[t].id = t;
-		students[t].numhelp = NUM_HELP;
-		students[t].visits = 0;
-		rc = pthread_create(&students[t].thread, NULL, StudentThread, (void *)&students[t]);
+        students[t].visits = 0;
+        sem_init(&students[t].notifyStudent, 0, 0);
+        rc = pthread_create(&students[t].thread, NULL, StudentThread, (void *)&students[t]);
 		if(rc) {
-			//DEBUG PRINT STATEMENT
-			printf("MAIN ERROR: Error Creating Thread! Code: %d\n", rc);
 			exit(-1);
 		}
 	}
 	for(t = 0; t < NUM_TUTORS; t++){
-		// DEBUG PRINT STATEMENT
-		printf("MAIN: Creating Tutor Thread #%ld\n", t);
-		students[t].id = t;
-		students[t].numhelp = NUM_HELP;
-		rc = pthread_create(&tutors[t].thread, NULL, TutorThread, (void *)&students[t]);
+		tutors[t].id = t;
+		rc = pthread_create(&tutors[t].thread, NULL, TutorThread, (void *)&tutors[t]);
 		if(rc) {
-			//DEBUG PRINT STATEMENT
-			printf("MAIN ERROR: Error Creating Thread! Code: %d\n", rc);
 			exit(-1);
 		}
 	}
 
-	pthread_t coordinator;
-	pthread_create(&coordinator, NULL, CoordinatorThread, NULL);
-
+    // Wait for all students to finish
 	for(t = 0; t < NUM_STUDENTS; t++){
 		pthread_join(students[t].thread, NULL);
 	}
-	for(t = 0; t < NUM_TUTORS; t++){
-		pthread_join(tutors[t].thread, NULL);
-	}
-	pthread_join(coordinator, NULL);
 
 	printf("Exiting Main Thread!\n");
 	return 0;
