@@ -17,6 +17,7 @@ struct student {
 	pthread_t thread;
 	int id;
 	int visits;
+	int numhelp;
 };
 
 struct tutor {
@@ -36,15 +37,17 @@ struct chair *chairs;
 
 void *StudentThread(void *data)
 {
+	struct student self = *(struct student*)data;
 	//DEBUG PRINT STATEMENT
-	printf("Student Thread %d Running!\n", *(int*)data);
+	printf("Student Thread %d Running!\n", self.id);
 	pthread_exit(NULL);
 }
 
 void *TutorThread(void *data)
 {
+	struct tutor self = *(struct tutor*)data;
 	//DEBUG PRINT STATEMENT
-	printf("Tutor Thread %d Running!\n", *(int*)data);
+	printf("Tutor Thread %d Running!\n", self.id);
 	pthread_exit(NULL);
 }
 
@@ -79,7 +82,9 @@ int main(int argc, char *argv[])
 	for(t = 0; t < NUM_STUDENTS; t++){
 		// DEBUG PRINT STATEMENT
 		printf("MAIN: Creating Student Thread #%ld\n", t);
-		rc = pthread_create(&students[t].thread, NULL, StudentThread, (void *)t);
+		students[t].id = t;
+		students[t].numhelp = NUM_HELP;
+		rc = pthread_create(&students[t].thread, NULL, StudentThread, (void *)&students[t]);
 		if(rc) {
 			//DEBUG PRINT STATEMENT
 			printf("MAIN ERROR: Error Creating Thread! Code: %d\n", rc);
@@ -89,7 +94,9 @@ int main(int argc, char *argv[])
 	for(t = 0; t < NUM_TUTORS; t++){
 		// DEBUG PRINT STATEMENT
 		printf("MAIN: Creating Tutor Thread #%ld\n", t);
-		rc = pthread_create(&tutors[t].thread, NULL, StudentThread, (void *)t);
+		students[t].id = t;
+		students[t].numhelp = NUM_HELP;
+		rc = pthread_create(&tutors[t].thread, NULL, StudentThread, (void *)&students[t]);
 		if(rc) {
 			//DEBUG PRINT STATEMENT
 			printf("MAIN ERROR: Error Creating Thread! Code: %d\n", rc);
