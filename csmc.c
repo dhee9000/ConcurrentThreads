@@ -1,3 +1,4 @@
+// Compile using:  gcc csmc.c -Wall -pthread -lpthread -std=c99 -o CSMC
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
@@ -234,7 +235,6 @@ int main(int argc, char *argv[])
 		pthread_join(students[t].thread, NULL);
 	}
 
-	// Exit the program
 	printf("Exiting Main Thread!\n");
 	return 0;
 }
