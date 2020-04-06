@@ -37,7 +37,10 @@ struct chair {
 struct chair *chairs;
 
 void studentDoProgram(){
-	sleep(generateRandomWaitTime());
+	int time = generateRandomWaitTime();
+	// DEBUG PRINT STATEMENT
+	printf("Student is programming for %d", time);
+	sleep(time);
 }
 
 void getHelpFromTutor(struct student *selfptr){
