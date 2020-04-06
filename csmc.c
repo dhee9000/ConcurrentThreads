@@ -30,8 +30,9 @@ typedef struct {
     int tutoredBy;
 } Chair;
 
-Chair * chairs;
+Chair *chairs;
 int chairsTaken = 0, arrivedStudentId = -1, arrivedStudentVisits = -1;
+sem_t *arrivedStudentNotifier;
 
 sem_t tutorNeeded;
 sem_t room_mutex;
@@ -61,7 +62,7 @@ void *StudentThread(void *data)
             printf("St: Student %d takes a seat. Empty chairs = %d.\n", self.id, NUM_CHAIRS - chairsTaken);
             
             // Notify coordinator, release chairs mutex
-            arrivedStudentId = self.id; arrivedStudentVisits = self.visits;
+            arrivedStudentId = self.id; arrivedStudentVisits = self.visits; arrivedStudentNotifier = &self.notifyStudent;
             sem_post(&notifyCoordinator);
             sem_post(&room_mutex);
             
@@ -115,7 +116,7 @@ void *TutorThread(void *data)
         // Notify the student that tutor is ready
         chairs[highestPriority].tutoredBy = self.id;
         activeTutoring++;
-        sem_post(&chairs[highestPriority].notifyStudent);
+        sem_post(chairs[highestPriority].notifyStudent);
 
         // Tutor the student
         sleep(TUTOR_TIME);
@@ -134,6 +135,7 @@ void *CoordinatorThread(void *data)
         // Get the Id of the notifying student
         int studentId = arrivedStudentId; arrivedStudentId = -1;
         int studentVisits = arrivedStudentVisits; arrivedStudentVisits = -1;
+		sem_t * studentNotifier = arrivedStudentNotifier; arrivedStudentNotifier = NULL;
         coordinatorRequests++;
 
         // Find the first empty chair
@@ -150,6 +152,7 @@ void *CoordinatorThread(void *data)
         chairs[currentChair].studentId = studentId;
         chairs[currentChair].arrivedAt = coordinatorRequests;
         chairs[currentChair].studentVisits = studentVisits;
+		chairs[currentChair].notifyStudent = studentNotifier;
 
         // Calculate and update chair priority
         int priority = -1, priorityLower = 0, priorityHigher = 0;
