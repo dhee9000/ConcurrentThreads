@@ -117,7 +117,8 @@ void *TutorThread(void *data)
 
         // Tutor the student
         sleep(TUTOR_TIME);
-        printf("Tu: Student %d tutored by Tutor %d. Students tutored now = %d. Total sessions tutored = %d\n", chairs[highestPriority].studentId, self.id);
+		tutoringCompleted++;
+        printf("Tu: Student %d tutored by Tutor %d. Students tutored now = %d. Total sessions tutored = %d\n", chairs[highestPriority].studentId, self.id, activeTutoring, tutoringCompleted);
         activeTutoring--;
     }
 }
