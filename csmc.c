@@ -40,9 +40,8 @@ void studentDoProgram(){
 }
 
 void getHelpFromTutor(struct student *selfptr){
-	struct student self = *selfptr;
-	printf("Student %d is getting help!", self.id);
-	self.visits++;
+	printf("Student %d is getting help!\n", selfptr->id);
+	selfptr->visits++;
 }
 
 void *StudentThread(void *data)
@@ -98,6 +97,7 @@ int main(int argc, char *argv[])
 		printf("MAIN: Creating Student Thread #%ld\n", t);
 		students[t].id = t;
 		students[t].numhelp = NUM_HELP;
+		students[t].visits = 0;
 		rc = pthread_create(&students[t].thread, NULL, StudentThread, (void *)&students[t]);
 		if(rc) {
 			//DEBUG PRINT STATEMENT
