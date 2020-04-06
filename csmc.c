@@ -96,7 +96,7 @@ int main(int argc, char *argv[])
 		printf("MAIN: Creating Tutor Thread #%ld\n", t);
 		students[t].id = t;
 		students[t].numhelp = NUM_HELP;
-		rc = pthread_create(&tutors[t].thread, NULL, StudentThread, (void *)&students[t]);
+		rc = pthread_create(&tutors[t].thread, NULL, TutorThread, (void *)&students[t]);
 		if(rc) {
 			//DEBUG PRINT STATEMENT
 			printf("MAIN ERROR: Error Creating Thread! Code: %d\n", rc);
