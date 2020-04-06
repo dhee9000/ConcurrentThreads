@@ -40,6 +40,8 @@ sem_t notifyCoordinator;
 
 int coordinatorRequests = 0; tutoringCompleted = 0; activeTutoring = 0;
 
+int NUM_CHAIRS = 0, NUM_HELP = 0;
+
 void *StudentThread(void *data)
 {
     // Get student record
@@ -169,8 +171,6 @@ void *CoordinatorThread(void *data)
         printf("Co: Student %d with priority %d in the queue. Waiting students now = %d. Total requests = %d", studentId, priority, chairsTaken, coordinatorRequests);
     }
 }
-
-int NUM_CHAIRS = 0, NUM_HELP = 0;
 
 int main(int argc, char *argv[])
 {
