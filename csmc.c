@@ -38,7 +38,7 @@ sem_t room_mutex;
 sem_t chairs_mutex;
 sem_t notifyCoordinator;
 
-int coordinatorRequests = 0; tutoringCompleted = 0; activeTutoring = 0;
+int coordinatorRequests = 0, tutoringCompleted = 0, activeTutoring = 0;
 
 int NUM_CHAIRS = 0, NUM_HELP = 0;
 
@@ -101,7 +101,7 @@ void *TutorThread(void *data)
     
     while(1){
         // Wait until tutor needed
-        wait(&tutorNeeded);
+        sem_wait(&tutorNeeded);
 
         // Get highest priority student
         int highestPriority = 0;
